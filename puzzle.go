@@ -5,7 +5,7 @@ import (
 	"strconv"
 )
 
-const depth int = 7
+const depth int = 18
 
 var (
 	moves    [depth+1]string
@@ -37,6 +37,7 @@ func main() {
 		board[i][5], _ = strconv.Atoi(b5)
 		board[i][6], _ = strconv.Atoi(b6)
 	}
+	fmt.Println("")
 
 	// ルートを探索
 	for i := 1; i < 6; i++ {
@@ -48,6 +49,7 @@ func main() {
 
 	board.print()
 	fmt.Println(maxMoves)
+	fmt.Println("消える数: " + strconv.Itoa(maxPoint))
 }
 
 // Board 盤面
@@ -63,15 +65,18 @@ func move(n int, board Board, x int, y int) {
 			maxMoves = moves
 		}
 		return
-	}
-
-	var movedBoard Board
-	for _, b1 := range board {
-		var dB []int
-		for _, b2 := range b1 {
-			dB = append(dB, b2)
+	} else if n == 9 {
+		// 枝刈り。8回移動して6ポイント以下のルートは探索しない。
+		point := calcPoint(board)
+		if point < 6 {
+			return
 		}
-		movedBoard = append(movedBoard, dB)
+	} else if n == 13 {
+		// 枝刈り2。12回移動して9ポイント以下のルートは探索しない。
+		point := calcPoint(board)
+		if point < 9 {
+			return
+		}
 	}
 
 	drop := board[y][x]
@@ -82,71 +87,79 @@ func move(n int, board Board, x int, y int) {
 
 	// Right
 	if moves[n-1] != "←" && dropR != 9 {
-		movedBoard[y][x] = dropR
-		movedBoard[y][x+1] = drop
+		board[y][x] = dropR
+		board[y][x+1] = drop
 		moves[n] = "→"
-		move(n+1, movedBoard, x+1, y)
-		movedBoard[y][x] = drop
-		movedBoard[y][x+1] = dropR
+		move(n+1, board, x+1, y)
+		board[y][x] = drop
+		board[y][x+1] = dropR
 		moves[n] = ""
 	}
 
 	// Down
 	if moves[n-1] != "↑" && dropD != 9 {
-		movedBoard[y][x] = dropD
-		movedBoard[y+1][x] = drop
+		board[y][x] = dropD
+		board[y+1][x] = drop
 		moves[n] = "↓"
-		move(n+1, movedBoard, x, y+1)
-		movedBoard[y][x] = drop
-		movedBoard[y+1][x] = dropD
+		move(n+1, board, x, y+1)
+		board[y][x] = drop
+		board[y+1][x] = dropD
 		moves[n] = ""
 	}
 
 	// Left
 	if moves[n-1] != "→" && dropL != 9 {
-		movedBoard[y][x] = dropL
-		movedBoard[y][x-1] = drop
+		board[y][x] = dropL
+		board[y][x-1] = drop
 		moves[n] = "←"
-		move(n+1, movedBoard, x-1, y)
-		movedBoard[y][x] = drop
-		movedBoard[y][x-1] = dropL
+		move(n+1, board, x-1, y)
+		board[y][x] = drop
+		board[y][x-1] = dropL
 		moves[n] = ""
 	}
 
 	// Up
 	if moves[n-1] != "↓" && dropU != 9 {
-		movedBoard[y][x] = dropU
-		movedBoard[y-1][x] = drop
+		board[y][x] = dropU
+		board[y-1][x] = drop
 		moves[n] = "↑"
-		move(n+1, movedBoard, x, y-1)
-		movedBoard[y][x] = drop
-		movedBoard[y-1][x] = dropU
+		move(n+1, board, x, y-1)
+		board[y][x] = drop
+		board[y-1][x] = dropU
 		moves[n] = ""
 	}
 }
 
 // delete ドロップを消す
 func delete(board Board) (Board, bool) {
-	var deletedBoard [][]int
 	isWork := false
-	for _, b1 := range board {
-		var dB []int
-		for _, b2 := range b1 {
-			dB = append(dB, b2)
+	deletedBoard := Board {
+		{9, 9, 9, 9, 9, 9, 9, 9},
+		{9, 0, 0, 0, 0, 0, 0, 9},
+		{9, 0, 0, 0, 0, 0, 0, 9},
+		{9, 0, 0, 0, 0, 0, 0, 9},
+		{9, 0, 0, 0, 0, 0, 0, 9},
+		{9, 0, 0, 0, 0, 0, 0, 9},
+		{9, 9, 9, 9, 9, 9, 9, 9},
+	}
+
+	for i := 1; i < 6; i++ {
+		for j := 1; j < 7; j++ {
+			deletedBoard[i][j] = board[i][j]
 		}
-		deletedBoard = append(deletedBoard, dB)
 	}
 
 	// 横方向の削除
 	for i := 1; i < 6; i++ {
 		for j := 2; j < 6; j++ {
-			dropL := board[i][j-1]
 			drop := board[i][j]
-			dropR := board[i][j+1]
 
 			if drop == 0 {
 				continue
 			}
+
+			dropL := board[i][j-1]
+			dropR := board[i][j+1]
 
 			if dropL == drop && drop == dropR {
 				deletedBoard[i][j-1] = 0
@@ -160,13 +173,14 @@ func delete(board Board) (Board, bool) {
 	// 縦方向の削除
 	for i := 2; i < 5; i++ {
 		for j := 1; j < 7; j++ {
-			dropU := board[i-1][j]
 			drop := board[i][j]
-			dropD := board[i+1][j]
 
 			if drop == 0 {
 				continue
 			}
+
+			dropU := board[i-1][j]
+			dropD := board[i+1][j]
 
 			if dropU == drop && drop == dropD {
 				deletedBoard[i-1][j] = 0
@@ -210,31 +224,21 @@ func fall(board Board) Board {
 
 // calcPoint どれだけ消えたかを計算
 func calcPoint(board Board) int {
-	var (
-		deletedBoard [][]int
-		isWork       bool
-	)
-	for _, b1 := range board {
-		var dB []int
-		for _, b2 := range b1 {
-			dB = append(dB, b2)
-		}
-		deletedBoard = append(deletedBoard, dB)
-	}
+	var isWork       bool
 
 	// 消えるドロップがなくなるまでloop
 	point := 0
 	for {
-		deletedBoard, isWork = delete(deletedBoard)
+		board, isWork = delete(board)
 		if isWork {
-			deletedBoard = fall(deletedBoard)
+			board = fall(board)
 			continue
 		}
 
 		// 消えなくなったらpointを計算
 		for i := 1; i < 6; i++ {
 			for j := 1; j < 7; j++ {
-				if deletedBoard[i][j] == 0 {
+				if board[i][j] == 0 {
 					point++
 				}
 			}
