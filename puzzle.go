@@ -5,7 +5,7 @@ import (
 	"strconv"
 )
 
-const depth int = 3
+const depth int = 7
 
 var (
 	moves    [depth+1]string
@@ -16,14 +16,29 @@ var (
 func main() {
 	board := Board {
 		{9, 9, 9, 9, 9, 9, 9, 9},
-		{9, 1, 2, 2, 4, 5, 6, 9},
-		{9, 6, 1, 2, 3, 3, 5, 9},
-		{9, 3, 1, 3, 3, 2, 1, 9},
-		{9, 4, 4, 4, 4, 3, 1, 9},
-		{9, 5, 1, 5, 2, 5, 1, 9},
+		{9, 0, 0, 0, 0, 0, 0, 9},
+		{9, 0, 0, 0, 0, 0, 0, 9},
+		{9, 0, 0, 0, 0, 0, 0, 9},
+		{9, 0, 0, 0, 0, 0, 0, 9},
+		{9, 0, 0, 0, 0, 0, 0, 9},
 		{9, 9, 9, 9, 9, 9, 9, 9},
 	}
 
+	// 盤面を入力
+	for i := 1; i < 6; i++ {
+		var b1, b2, b3, b4, b5, b6 string
+		fmt.Print("> ")
+		fmt.Scan(&b1, &b2, &b3, &b4, &b5, &b6)
+
+		board[i][1], _ = strconv.Atoi(b1)
+		board[i][2], _ = strconv.Atoi(b2)
+		board[i][3], _ = strconv.Atoi(b3)
+		board[i][4], _ = strconv.Atoi(b4)
+		board[i][5], _ = strconv.Atoi(b5)
+		board[i][6], _ = strconv.Atoi(b6)
+	}
+
+	// ルートを探索
 	for i := 1; i < 6; i++ {
 		for j := 1; j < 7; j++ {
 			moves[0] = strconv.Itoa(j) + strconv.Itoa(i)
@@ -31,9 +46,11 @@ func main() {
 		}
 	}
 
+	board.print()
 	fmt.Println(maxMoves)
 }
 
+// Board 盤面
 type Board [][]int
 
 // move ドロップを移動させる。手数、盤面、x座標、y座標
@@ -64,10 +81,10 @@ func move(n int, board Board, x int, y int) {
 	dropU := board[y-1][x]
 
 	// Right
-	if dropR != 9 {
+	if moves[n-1] != "←" && dropR != 9 {
 		movedBoard[y][x] = dropR
 		movedBoard[y][x+1] = drop
-		moves[n] = "R"
+		moves[n] = "→"
 		move(n+1, movedBoard, x+1, y)
 		movedBoard[y][x] = drop
 		movedBoard[y][x+1] = dropR
@@ -75,10 +92,10 @@ func move(n int, board Board, x int, y int) {
 	}
 
 	// Down
-	if dropD != 9 {
+	if moves[n-1] != "↑" && dropD != 9 {
 		movedBoard[y][x] = dropD
 		movedBoard[y+1][x] = drop
-		moves[n] = "D"
+		moves[n] = "↓"
 		move(n+1, movedBoard, x, y+1)
 		movedBoard[y][x] = drop
 		movedBoard[y+1][x] = dropD
@@ -86,10 +103,10 @@ func move(n int, board Board, x int, y int) {
 	}
 
 	// Left
-	if dropL != 9 {
+	if moves[n-1] != "→" && dropL != 9 {
 		movedBoard[y][x] = dropL
 		movedBoard[y][x-1] = drop
-		moves[n] = "L"
+		moves[n] = "←"
 		move(n+1, movedBoard, x-1, y)
 		movedBoard[y][x] = drop
 		movedBoard[y][x-1] = dropL
@@ -97,10 +114,10 @@ func move(n int, board Board, x int, y int) {
 	}
 
 	// Up
-	if dropU != 9 {
+	if moves[n-1] != "↓" && dropU != 9 {
 		movedBoard[y][x] = dropU
 		movedBoard[y-1][x] = drop
-		moves[n] = "U"
+		moves[n] = "↑"
 		move(n+1, movedBoard, x, y-1)
 		movedBoard[y][x] = drop
 		movedBoard[y-1][x] = dropU
