@@ -2,6 +2,15 @@ package main
 
 import (
 	"fmt"
+	"strconv"
+)
+
+const depth int = 3
+
+var (
+	moves    [depth+1]string
+	maxPoint int = 0
+	maxMoves [depth+1]string
 )
 
 func main() {
@@ -15,12 +24,89 @@ func main() {
 		{9, 9, 9, 9, 9, 9, 9, 9},
 	}
 
-	board.print()
-	point := calcPoint(board)
-	fmt.Println(point)
+	for i := 1; i < 6; i++ {
+		for j := 1; j < 7; j++ {
+			moves[0] = strconv.Itoa(j) + strconv.Itoa(i)
+			move(1, board, j, i)
+		}
+	}
+
+	fmt.Println(maxMoves)
 }
 
 type Board [][]int
+
+// move ドロップを移動させる。手数、盤面、x座標、y座標
+func move(n int, board Board, x int, y int) {
+	// 指定の手数以上になった場合、ポイントを算出して最高得点だったらmovesを記録。
+	if n > depth {
+		point := calcPoint(board)
+		if point > maxPoint {
+			maxPoint = point
+			maxMoves = moves
+		}
+		return
+	}
+
+	var movedBoard Board
+	for _, b1 := range board {
+		var dB []int
+		for _, b2 := range b1 {
+			dB = append(dB, b2)
+		}
+		movedBoard = append(movedBoard, dB)
+	}
+
+	drop := board[y][x]
+	dropR := board[y][x+1]
+	dropD := board[y+1][x]
+	dropL := board[y][x-1]
+	dropU := board[y-1][x]
+
+	// Right
+	if dropR != 9 {
+		movedBoard[y][x] = dropR
+		movedBoard[y][x+1] = drop
+		moves[n] = "R"
+		move(n+1, movedBoard, x+1, y)
+		movedBoard[y][x] = drop
+		movedBoard[y][x+1] = dropR
+		moves[n] = ""
+	}
+
+	// Down
+	if dropD != 9 {
+		movedBoard[y][x] = dropD
+		movedBoard[y+1][x] = drop
+		moves[n] = "D"
+		move(n+1, movedBoard, x, y+1)
+		movedBoard[y][x] = drop
+		movedBoard[y+1][x] = dropD
+		moves[n] = ""
+	}
+
+	// Left
+	if dropL != 9 {
+		movedBoard[y][x] = dropL
+		movedBoard[y][x-1] = drop
+		moves[n] = "L"
+		move(n+1, movedBoard, x-1, y)
+		movedBoard[y][x] = drop
+		movedBoard[y][x-1] = dropL
+		moves[n] = ""
+	}
+
+	// Up
+	if dropU != 9 {
+		movedBoard[y][x] = dropU
+		movedBoard[y-1][x] = drop
+		moves[n] = "U"
+		move(n+1, movedBoard, x, y-1)
+		movedBoard[y][x] = drop
+		movedBoard[y-1][x] = dropU
+		moves[n] = ""
+	}
+}
 
 // delete ドロップを消す
 func delete(board Board) (Board, bool) {
