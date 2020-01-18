@@ -5,12 +5,17 @@ import (
 	"strconv"
 )
 
-const depth int = 18
+const depth int = 22
+var	rate float32 = 0.0
 
 var (
-	moves    [depth+1]string
-	maxPoint int = 0
-	maxMoves [depth+1]string
+	moves     [depth+1]string
+	maxPoint  int = 0
+	maxPoint2 int = 0
+	maxPoint3 int = 0
+	maxMoves  [depth+1]string
+	maxMoves2 [depth+1]string
+	maxMoves3 [depth+1]string
 )
 
 func main() {
@@ -38,18 +43,32 @@ func main() {
 		board[i][6], _ = strconv.Atoi(b6)
 	}
 	fmt.Println("")
+	board.print()
 
 	// ルートを探索
 	for i := 1; i < 6; i++ {
 		for j := 1; j < 7; j++ {
 			moves[0] = strconv.Itoa(j) + strconv.Itoa(i)
 			move(1, board, j, i)
+			rate += 10/3.0
+			log := strconv.Itoa(int(rate)) + "% 最大値:" + strconv.Itoa(maxPoint)
+			fmt.Printf("\r%s", log)
 		}
 	}
 
-	board.print()
+	fmt.Printf("\r")
+	fmt.Println("---------------------")
+	fmt.Println("候補１:")
 	fmt.Println(maxMoves)
 	fmt.Println("消える数: " + strconv.Itoa(maxPoint))
+	fmt.Println("")
+	fmt.Println("候補２:")
+	fmt.Println(maxMoves2)
+	fmt.Println("消える数: " + strconv.Itoa(maxPoint2))
+	fmt.Println("")
+	fmt.Println("候補３:")
+	fmt.Println(maxMoves3)
+	fmt.Println("消える数: " + strconv.Itoa(maxPoint3))
 }
 
 // Board 盤面
@@ -57,25 +76,61 @@ type Board [][]int
 
 // move ドロップを移動させる。手数、盤面、x座標、y座標
 func move(n int, board Board, x int, y int) {
+	point := 0
 	// 指定の手数以上になった場合、ポイントを算出して最高得点だったらmovesを記録。
 	if n > depth {
-		point := calcPoint(board)
+		point = calcPoint(board)
 		if point > maxPoint {
 			maxPoint = point
 			maxMoves = moves
+			log := strconv.Itoa(int(rate)) + "% 最大値:" + strconv.Itoa(maxPoint)
+			fmt.Printf("\r%s", log)
+		} else if point > maxPoint2 {
+			maxPoint2 = point
+			maxMoves2 = moves
+		} else if point > maxPoint3 {
+			maxPoint3 = point
+			maxMoves3 = moves
 		}
 		return
 	} else if n == 9 {
 		// 枝刈り。8回移動して6ポイント以下のルートは探索しない。
-		point := calcPoint(board)
+		point = calcPoint(board)
 		if point < 6 {
 			return
 		}
 	} else if n == 13 {
 		// 枝刈り2。12回移動して9ポイント以下のルートは探索しない。
-		point := calcPoint(board)
+		point = calcPoint(board)
 		if point < 9 {
 			return
+		}
+	} else if n == 17 {
+		// 枝刈り3。16回移動して12ポイント以下のルートは探索しない。
+		point = calcPoint(board)
+		if point < 12 {
+			return
+		}
+	} else if n == 21 {
+		// 枝刈り4。20回移動して12ポイント以下のルートは探索しない。
+		point = calcPoint(board)
+		if point < 12 {
+			return
+		}
+	} else if n > depth - 3 {
+		// 探索深さの3手以内なら全てのルートを評価。
+		if point == 0 {
+			point = calcPoint(board)
+		}
+		if point > maxPoint {
+			maxPoint = point
+			maxMoves = moves
+		} else if point > maxPoint2 {
+			maxPoint2 = point
+			maxMoves2 = moves
+		} else if point > maxPoint3 {
+			maxPoint3 = point
+			maxMoves3 = moves
 		}
 	}
 
@@ -254,5 +309,4 @@ func (board Board) print() {
 	for _, b := range board {
 		fmt.Println(b)
 	}
-	fmt.Println("---------------------")
 }
