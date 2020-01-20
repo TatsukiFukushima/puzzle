@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"strconv"
+	"time"
 )
 
 const depth int = 24
@@ -42,6 +43,7 @@ func main() {
 	}
 	fmt.Println("")
 	board.printBoard()
+	start := time.Now()
 
 	// ルートを探索
 	for i := 0; i < 5; i++ {
@@ -70,6 +72,10 @@ func main() {
 	fmt.Println(minMoves3)
 	fmt.Println("消える数: " + strconv.Itoa(30 - minPoint3))
 	printMoves(minMoves3)
+
+	end := time.Now()
+	result := fmt.Sprintf("解析時間: %f秒\n", (end.Sub(start)).Seconds())
+	fmt.Println(result)
 }
 
 // Board 盤面
@@ -277,7 +283,7 @@ func fall(board Board) Board {
 
 // calcPoint どれだけ残るかを計算
 func calcPoint(board Board) int {
-	var isWork       bool
+	var isWork bool
 
 	// 消えるドロップがなくなるまでloop
 	point := 0
