@@ -41,7 +41,7 @@ func main() {
 		board[i][5], _ = strconv.Atoi(b6)
 	}
 	fmt.Println("")
-	board.print()
+	board.printBoard()
 
 	// ルートを探索
 	for i := 0; i < 5; i++ {
@@ -59,14 +59,17 @@ func main() {
 	fmt.Println("候補１:")
 	fmt.Println(minMoves)
 	fmt.Println("消える数: " + strconv.Itoa(30 - minPoint))
+	printMoves(minMoves)
 	fmt.Println("")
 	fmt.Println("候補２:")
 	fmt.Println(minMoves2)
 	fmt.Println("消える数: " + strconv.Itoa(30 - minPoint2))
+	printMoves(minMoves2)
 	fmt.Println("")
 	fmt.Println("候補３:")
 	fmt.Println(minMoves3)
 	fmt.Println("消える数: " + strconv.Itoa(30 - minPoint3))
+	printMoves(minMoves3)
 }
 
 // Board 盤面
@@ -299,9 +302,72 @@ func calcPoint(board Board) int {
 	return point
 }
 
-// print 配列をきれいに出力。テスト用かも。
-func (board Board) print() {
+// printBoard 配列をきれいに出力。テスト用かも。
+func (board Board) printBoard() {
 	for _, b := range board {
 		fmt.Println(b)
+	}
+}
+
+// printMoves ルートをきれいに表示
+func printMoves(moves [depth+1]string) {
+	root := [][]string{
+		{"○", " ", "○", " ", "○", " ", "○", " ", "○", " ", "○"},
+		{" ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " "},
+		{"○", " ", "○", " ", "○", " ", "○", " ", "○", " ", "○"},
+		{" ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " "},
+		{"○", " ", "○", " ", "○", " ", "○", " ", "○", " ", "○"},
+		{" ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " "},
+		{"○", " ", "○", " ", "○", " ", "○", " ", "○", " ", "○"},
+		{" ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " "},
+		{"○", " ", "○", " ", "○", " ", "○", " ", "○", " ", "○"},
+	}
+
+	start, _ := strconv.Atoi(moves[0])
+	x := (start / 10) * 2 - 2
+	y := (start % 10) * 2 - 2
+	root[y][x] = "S"
+
+	for i := 1; i < len(moves); i++ {
+		switch moves[i] {
+			case "→":
+				arrow := root[y][x+1]
+				if arrow == " " || arrow == "→" {
+					root[y][x+1] = "→"
+				} else if arrow == "←" || arrow == "⇄" {
+					root[y][x+1] = "⇄"
+				}
+				x += 2
+			case "↓":
+				arrow := root[y+1][x]
+				if arrow == " " || arrow == "↓" {
+					root[y+1][x] = "↓"
+				} else if arrow == "↑" || arrow == "⇅" {
+					root[y+1][x] = "⇅"
+				}
+				y += 2
+			case "←":
+				arrow := root[y][x-1]
+				if arrow == " " || arrow == "←" {
+					root[y][x-1] = "←"
+				} else if arrow == "→" || arrow == "⇄" {
+					root[y][x-1] = "⇄"
+				}
+				x -= 2
+			case "↑":
+				arrow := root[y-1][x]
+				if arrow == " " || arrow == "↑" {
+					root[y-1][x] = "↑"
+				} else if arrow == "↓" || arrow == "⇅" {
+					root[y-1][x] = "⇅"
+				}
+				y -= 2
+		}
+	}
+
+	root[y][x] = "G"
+
+	for _, r := range root {
+		fmt.Println(r)
 	}
 }
