@@ -84,8 +84,8 @@ type Board [][]int
 // move ドロップを移動させる。手数、盤面、x座標、y座標
 func move(n int, board Board, x int, y int) {
 	point := 0
-	// 指定の手数以上になった場合、ポイントを算出して最高得点だったらmovesを記録。
-	if n > depth {
+	// depth-1以上になった場合、ポイントを算出して最高得点だったらmovesを記録。
+	if n > depth - 1 {
 		point = calcPoint(board)
 		if point < minPoint {
 			minPoint = point
@@ -99,7 +99,9 @@ func move(n int, board Board, x int, y int) {
 			minPoint3 = point
 			minMoves3 = moves
 		}
-		return
+		if n > depth {
+			return
+		}
 	} else if n == 9 {
 		// 枝刈り。8回移動して24ポイントより大きいルートは探索しない。
 		point = calcPoint(board)
@@ -123,21 +125,6 @@ func move(n int, board Board, x int, y int) {
 		point = calcPoint(board)
 		if point > 18 {
 			return
-		}
-	} else if n > depth - 3 {
-		// 探索深さの3手以内なら全てのルートを評価。
-		if point == 0 {
-			point = calcPoint(board)
-		}
-		if point < minPoint {
-			minPoint = point
-			minMoves = moves
-		} else if point < minPoint2 {
-			minPoint2 = point
-			minMoves2 = moves
-		} else if point < minPoint3 {
-			minPoint3 = point
-			minMoves3 = moves
 		}
 	}
 
