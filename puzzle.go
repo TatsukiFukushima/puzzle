@@ -6,27 +6,23 @@ import (
 	"time"
 )
 
+// 変更前: 6.625秒 25個
+// [53 ↓ ↓ → ↑ ← ← ← ↓ ← ↑ ↑ ↑ ↑ → ↓ → ↑ → ↓ ↓ ← ← ← ←]
+
 const depth int = 24
-var	rate float32 = 0.0
+var bestMoves BestMoves
 
 var (
-	moves     [depth+1]string
 	minPoint  int = 30
 	minPoint2 int = 30
 	minPoint3 int = 30
-	minMoves  [depth+1]string
-	minMoves2 [depth+1]string
-	minMoves3 [depth+1]string
+	minMoves  [depth+2]string
+	minMoves2 [depth+2]string
+	minMoves3 [depth+2]string
 )
 
 func main() {
-	board := Board {
-		{0, 0, 0, 0, 0, 0},
-		{0, 0, 0, 0, 0, 0},
-		{0, 0, 0, 0, 0, 0},
-		{0, 0, 0, 0, 0, 0},
-		{0, 0, 0, 0, 0, 0},
-	}
+	var board Board
 
 	// 盤面を入力
 	for i := 0; i < 5; i++ {
@@ -43,63 +39,75 @@ func main() {
 	}
 	fmt.Println("")
 	board.printBoard()
+	fmt.Println("----------------------------")
 	start := time.Now()
 
 	// ルートを探索
 	for i := 0; i < 5; i++ {
 		for j := 0; j < 6; j++ {
-			moves[0] = strconv.Itoa(j+1) + strconv.Itoa(i+1)
-			move(1, board, j, i)
-			rate += 10/3.0
-			log := strconv.Itoa(int(rate)) + "% 最大値:" + strconv.Itoa(30 - minPoint)
-			fmt.Printf("\r%s", log)
+			bestMoves[i][j].Point = 30
+			calcMoves(board, j, i)
 		}
 	}
 
-	fmt.Printf("\r")
-	fmt.Println("---------------------")
-	fmt.Println("候補１:")
-	fmt.Println(minMoves)
-	fmt.Println("消える数: " + strconv.Itoa(30 - minPoint))
-	printMoves(minMoves)
-	fmt.Println("")
-	fmt.Println("候補２:")
-	fmt.Println(minMoves2)
-	fmt.Println("消える数: " + strconv.Itoa(30 - minPoint2))
-	printMoves(minMoves2)
-	fmt.Println("")
-	fmt.Println("候補３:")
-	fmt.Println(minMoves3)
-	fmt.Println("消える数: " + strconv.Itoa(30 - minPoint3))
-	printMoves(minMoves3)
+	bestMove := BestMove{
+		Point: 30,
+	}
+	// 30の候補の中から最善手を計算
+	for i := 0; i < 5; i++ {
+		for j := 0; j < 6; j++ {
+			if bestMoves[i][j].Point < bestMove.Point {
+				bestMove.Point = bestMoves[i][j].Point
+				bestMove.Moves = bestMoves[i][j].Moves
+			}
+		}
+	}
 
 	end := time.Now()
 	result := fmt.Sprintf("解析時間: %f秒\n", (end.Sub(start)).Seconds())
+	fmt.Println(bestMove.Moves)
+	printMoves(bestMove.Moves)
+	fmt.Println("消える数: " + strconv.Itoa(30 - bestMove.Point))
 	fmt.Println(result)
 }
 
+// BestMoves 最善手のリスト
+type BestMoves [5][6]BestMove
+
+// BestMove 最善手の情報を格納
+type BestMove struct {
+	Moves [depth+2]string
+	Point int
+}
+
 // Board 盤面
-type Board [][]int
+type Board [5][6]int
+
+// calcMoves どの移動方法が最適か計算する。開始位置は指定。
+func calcMoves(board Board, x int, y int) {
+	var moves [depth+2]string
+	moves[0] = strconv.Itoa(x+1)
+	moves[1] = strconv.Itoa(y+1)
+	move(1, board, x, y, moves)
+}
 
 // move ドロップを移動させる。手数、盤面、x座標、y座標
-func move(n int, board Board, x int, y int) {
+func move(n int, board Board, x int, y int, moves [depth+2]string) {
 	point := 0
-	// 指定の手数以上になった場合、ポイントを算出して最高得点だったらmovesを記録。
-	if n > depth {
+	firstXPlus, _ := strconv.Atoi(moves[0])
+	firstYPlus, _ := strconv.Atoi(moves[1])
+	firstX := firstXPlus - 1
+	firstY := firstYPlus - 1
+	// 指定の手数-1以上になった場合、ポイントを算出して最高得点だったらmovesを記録。
+	if n > depth - 1 {
 		point = calcPoint(board)
-		if point < minPoint {
-			minPoint = point
-			minMoves = moves
-			log := strconv.Itoa(int(rate)) + "% 最大値:" + strconv.Itoa(30 - minPoint)
-			fmt.Printf("\r%s", log)
-		} else if point < minPoint2 {
-			minPoint2 = point
-			minMoves2 = moves
-		} else if point < minPoint3 {
-			minPoint3 = point
-			minMoves3 = moves
+		if point < bestMoves[firstY][firstX].Point {
+			bestMoves[firstY][firstX].Point = point
+			bestMoves[firstY][firstX].Moves = moves
 		}
-		return
+		if n > depth {
+			return
+		}
 	} else if n == 9 {
 		// 枝刈り。8回移動して24ポイントより大きいルートは探索しない。
 		point = calcPoint(board)
@@ -124,78 +132,62 @@ func move(n int, board Board, x int, y int) {
 		if point > 18 {
 			return
 		}
-	} else if n > depth - 3 {
-		// 探索深さの3手以内なら全てのルートを評価。
-		if point == 0 {
-			point = calcPoint(board)
-		}
-		if point < minPoint {
-			minPoint = point
-			minMoves = moves
-		} else if point < minPoint2 {
-			minPoint2 = point
-			minMoves2 = moves
-		} else if point < minPoint3 {
-			minPoint3 = point
-			minMoves3 = moves
-		}
 	}
 
 	drop := board[y][x]
 	// 高速化のため。
 	nPlus := n+1
-	nMinus := n-1
 	xPlus := x+1
 	xMinus := x-1
 	yPlus := y+1
 	yMinus := y-1
 
 	// Right
-	if moves[nMinus] != "←" && x != 5 {
+	if moves[n] != "←" && x != 5 {
 		dropR := board[y][xPlus]
 		board[y][x] = dropR
 		board[y][xPlus] = drop
-		moves[n] = "→"
-		move(nPlus, board, xPlus, y)
+		moves[nPlus] = "→"
+		move(nPlus, board, xPlus, y, moves)
 		board[y][x] = drop
 		board[y][xPlus] = dropR
-		moves[n] = ""
+		moves[nPlus] = ""
 	}
 
 	// Down
-	if moves[nMinus] != "↑" && y != 4 {
+	if moves[n] != "↑" && y != 4 {
 		dropD := board[yPlus][x]
 		board[y][x] = dropD
 		board[yPlus][x] = drop
-		moves[n] = "↓"
-		move(nPlus, board, x, yPlus)
+		moves[nPlus] = "↓"
+		move(nPlus, board, x, yPlus, moves)
 		board[y][x] = drop
 		board[yPlus][x] = dropD
-		moves[n] = ""
+		moves[nPlus] = ""
 	}
 
 	// Left
-	if moves[nMinus] != "→" && x != 0 {
+	if moves[n] != "→" && x != 0 {
 		dropL := board[y][xMinus]
 		board[y][x] = dropL
 		board[y][xMinus] = drop
-		moves[n] = "←"
-		move(nPlus, board, xMinus, y)
+		moves[nPlus] = "←"
+		move(nPlus, board, xMinus, y, moves)
 		board[y][x] = drop
 		board[y][xMinus] = dropL
-		moves[n] = ""
+		moves[nPlus] = ""
 	}
 
 	// Up
-	if moves[nMinus] != "↓" && y != 0 {
+	if moves[n] != "↓" && y != 0 {
 		dropU := board[yMinus][x]
 		board[y][x] = dropU
 		board[yMinus][x] = drop
-		moves[n] = "↑"
-		move(nPlus, board, x, yMinus)
+		moves[nPlus] = "↑"
+		move(nPlus, board, x, yMinus, moves)
 		board[y][x] = drop
 		board[yMinus][x] = dropU
-		moves[n] = ""
+		moves[nPlus] = ""
 	}
 }
 
@@ -257,13 +249,7 @@ func delete(board Board) (Board, bool) {
 
 // fall ドロップを落とす
 func fall(board Board) Board {
-	fallenBoard := Board {
-		{0, 0, 0, 0, 0, 0},
-		{0, 0, 0, 0, 0, 0},
-		{0, 0, 0, 0, 0, 0},
-		{0, 0, 0, 0, 0, 0},
-		{0, 0, 0, 0, 0, 0},
-	}
+	var fallenBoard Board
 
 	// 列ごとにループを回しているということを明示するためにjとしている。
 	for j := 0; j < 6; j++ {
@@ -316,7 +302,7 @@ func (board Board) printBoard() {
 }
 
 // printMoves ルートをきれいに表示
-func printMoves(moves [depth+1]string) {
+func printMoves(moves [depth+2]string) {
 	root := [][]string{
 		{"○", " ", "○", " ", "○", " ", "○", " ", "○", " ", "○"},
 		{" ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " "},
@@ -329,12 +315,13 @@ func printMoves(moves [depth+1]string) {
 		{"○", " ", "○", " ", "○", " ", "○", " ", "○", " ", "○"},
 	}
 
-	start, _ := strconv.Atoi(moves[0])
-	x := (start / 10) * 2 - 2
-	y := (start % 10) * 2 - 2
+	startX, _ := strconv.Atoi(moves[0])
+	startY, _ := strconv.Atoi(moves[1])
+	x := startX * 2 - 2
+	y := startY * 2 - 2
 	root[y][x] = "S"
 
-	for i := 1; i < len(moves); i++ {
+	for i := 2; i < len(moves); i++ {
 		switch moves[i] {
 			case "→":
 				arrow := root[y][x+1]
