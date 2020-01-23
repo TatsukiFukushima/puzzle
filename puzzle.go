@@ -17,9 +17,10 @@ import (
 // 現状: 1.96秒 25個
 
 const depth int = 24
-var bestMoves BestMoves
 
 var (
+	rate      float32
+	bestMoves BestMoves
 	minPoint  int = 30
 	minPoint2 int = 30
 	minPoint3 int = 30
@@ -46,7 +47,6 @@ func main() {
 	}
 	fmt.Println("")
 	board.printBoard()
-	fmt.Println("----------------------------")
 	start := time.Now()
 
 	// ルートを探索
@@ -54,27 +54,49 @@ func main() {
 		for j := 0; j < 6; j++ {
 			bestMoves[i][j].Point = 30
 			calcMoves(board, j, i)
+			rate += 10/3.0
+			log := strconv.Itoa(int(rate)) + "%"
+			fmt.Printf("\r%s", log)
 		}
 	}
 
-	bestMove := BestMove{
-		Point: 30,
-	}
+	bestMove := BestMove{Point: 30}
+	bestMove2 := BestMove{Point: 30}
+	bestMove3 := BestMove{Point: 30}
+
 	// 30の候補の中から最善手を計算
 	for i := 0; i < 5; i++ {
 		for j := 0; j < 6; j++ {
 			if bestMoves[i][j].Point < bestMove.Point {
 				bestMove.Point = bestMoves[i][j].Point
 				bestMove.Moves = bestMoves[i][j].Moves
+			} else if bestMoves[i][j].Point < bestMove2.Point {
+				bestMove2.Point = bestMoves[i][j].Point
+				bestMove2.Moves = bestMoves[i][j].Moves
+			} else if bestMoves[i][j].Point < bestMove3.Point {
+				bestMove3.Point = bestMoves[i][j].Point
+				bestMove3.Moves = bestMoves[i][j].Moves
 			}
 		}
 	}
 
 	end := time.Now()
 	result := fmt.Sprintf("解析時間: %f秒\n", (end.Sub(start)).Seconds())
+
+	fmt.Printf("\r")
+	fmt.Println("---------------------")
+	fmt.Print("候補１: ")
 	fmt.Println(bestMove.Moves)
-	printMoves(bestMove.Moves)
 	fmt.Println("消える数: " + strconv.Itoa(30 - bestMove.Point))
+	printMoves(bestMove.Moves)
+	fmt.Print("候補２: ")
+	fmt.Println(bestMove2.Moves)
+	fmt.Println("消える数: " + strconv.Itoa(30 - bestMove2.Point))
+	printMoves(bestMove2.Moves)
+	fmt.Print("候補３: ")
+	fmt.Println(bestMove3.Moves)
+	fmt.Println("消える数: " + strconv.Itoa(30 - bestMove3.Point))
+	printMoves(bestMove3.Moves)
 	fmt.Println(result)
 }
 
