@@ -21,12 +21,6 @@ const depth int = 24
 var (
 	rate      float32
 	bestMoves BestMoves
-	minPoint  int = 30
-	minPoint2 int = 30
-	minPoint3 int = 30
-	minMoves  [depth+2]string
-	minMoves2 [depth+2]string
-	minMoves3 [depth+2]string
 )
 
 func main() {
@@ -82,21 +76,24 @@ func main() {
 
 	end := time.Now()
 	result := fmt.Sprintf("解析時間: %f秒\n", (end.Sub(start)).Seconds())
+	bestArrowMove := intToArrow(bestMove.Moves)
+	bestArrowMove2 := intToArrow(bestMove2.Moves)
+	bestArrowMove3 := intToArrow(bestMove3.Moves)
 
 	fmt.Printf("\r")
 	fmt.Println("---------------------")
 	fmt.Print("候補１: ")
-	fmt.Println(bestMove.Moves)
+	fmt.Println(bestArrowMove)
 	fmt.Println("消える数: " + strconv.Itoa(30 - bestMove.Point))
-	printMoves(bestMove.Moves)
+	printMoves(bestArrowMove)
 	fmt.Print("候補２: ")
-	fmt.Println(bestMove2.Moves)
+	fmt.Println(bestArrowMove2)
 	fmt.Println("消える数: " + strconv.Itoa(30 - bestMove2.Point))
-	printMoves(bestMove2.Moves)
+	printMoves(bestArrowMove2)
 	fmt.Print("候補３: ")
-	fmt.Println(bestMove3.Moves)
+	fmt.Println(bestArrowMove3)
 	fmt.Println("消える数: " + strconv.Itoa(30 - bestMove3.Point))
-	printMoves(bestMove3.Moves)
+	printMoves(bestArrowMove3)
 	fmt.Println(result)
 }
 
@@ -105,7 +102,7 @@ type BestMoves [5][6]BestMove
 
 // BestMove 最善手の情報を格納
 type BestMove struct {
-	Moves [depth+2]string
+	Moves [depth+2]int
 	Point int
 }
 
@@ -114,22 +111,20 @@ type Board [5][6]int
 
 // calcMoves どの移動方法が最適か計算する。開始位置は指定。
 func calcMoves(board Board, x int, y int) {
-	var moves [depth+2]string
-	moves[0] = strconv.Itoa(x+1)
-	moves[1] = strconv.Itoa(y+1)
+	var moves [depth+2]int
+	moves[0] = x
+	moves[1] = y
 	move(1, board, x, y, moves)
 }
 
 // move ドロップを移動させる。手数、盤面、x座標、y座標
-func move(n int, board Board, x int, y int, moves [depth+2]string) {
+func move(n int, board Board, x int, y int, moves [depth+2]int) {
 	point := 0
-	firstXPlus, _ := strconv.Atoi(moves[0])
-	firstYPlus, _ := strconv.Atoi(moves[1])
-	firstX := firstXPlus - 1
-	firstY := firstYPlus - 1
 	// 指定の手数-1以上になった場合、ポイントを算出して最高得点だったらmovesを記録。
 	if n > depth - 1 {
 		point = calcPoint(board)
+		firstX := moves[0]
+		firstY := moves[1]
 		if point < bestMoves[firstY][firstX].Point {
 			bestMoves[firstY][firstX].Point = point
 			bestMoves[firstY][firstX].Moves = moves
@@ -155,8 +150,20 @@ func move(n int, board Board, x int, y int, moves [depth+2]string) {
 		if point > 18 {
 			return
 		}
+	} else if n == 19 {
+		// 枝刈り4。18回移動して18ポイントより大きいルートは探索しない。
+		point = calcPoint(board)
+		if point > 18 {
+			return
+		}
 	} else if n == 21 {
-		// 枝刈り4。20回移動して18ポイントより大きいルートは探索しない。
+		// 枝刈り5。20回移動して18ポイントより大きいルートは探索しない。
+		point = calcPoint(board)
+		if point > 18 {
+			return
+		}
+	} else if n == 23 {
+		// 枝刈り6。22回移動して18ポイントより大きいルートは探索しない。
 		point = calcPoint(board)
 		if point > 18 {
 			return
@@ -171,53 +178,50 @@ func move(n int, board Board, x int, y int, moves [depth+2]string) {
 	yPlus := y+1
 	yMinus := y-1
 
-	// Right
-	if moves[n] != "←" && x != 5 {
+	// Right 1
+	if (moves[n] != 3 || n == 1) && x != 5 {
 		dropR := board[y][xPlus]
 		board[y][x] = dropR
 		board[y][xPlus] = drop
-		moves[nPlus] = "→"
+		moves[nPlus] = 1
 		move(nPlus, board, xPlus, y, moves)
 		board[y][x] = drop
 		board[y][xPlus] = dropR
-		moves[nPlus] = ""
 	}
 
-	// Down
-	if moves[n] != "↑" && y != 4 {
+	// Down 2
+	if (moves[n] != 4 || n == 1) && y != 4 {
 		dropD := board[yPlus][x]
 		board[y][x] = dropD
 		board[yPlus][x] = drop
-		moves[nPlus] = "↓"
+		moves[nPlus] = 2
 		move(nPlus, board, x, yPlus, moves)
 		board[y][x] = drop
 		board[yPlus][x] = dropD
-		moves[nPlus] = ""
 	}
 
-	// Left
-	if moves[n] != "→" && x != 0 {
+	// Left 3
+	if (moves[n] != 1 || n == 1) && x != 0 {
 		dropL := board[y][xMinus]
 		board[y][x] = dropL
 		board[y][xMinus] = drop
-		moves[nPlus] = "←"
+		moves[nPlus] = 3
 		move(nPlus, board, xMinus, y, moves)
 		board[y][x] = drop
 		board[y][xMinus] = dropL
-		moves[nPlus] = ""
 	}
 
-	// Up
-	if moves[n] != "↓" && y != 0 {
+	// Up 4
+	if (moves[n] != 2 || n == 1) && y != 0 {
 		dropU := board[yMinus][x]
 		board[y][x] = dropU
 		board[yMinus][x] = drop
-		moves[nPlus] = "↑"
+		moves[nPlus] = 4
 		move(nPlus, board, x, yMinus, moves)
 		board[y][x] = drop
 		board[yMinus][x] = dropU
-		moves[nPlus] = ""
 	}
+	moves[nPlus] = 0
 }
 
 // delete ドロップを消す
@@ -392,4 +396,23 @@ func printMoves(moves [depth+2]string) {
 	for _, r := range root {
 		fmt.Println(r)
 	}
+}
+
+// intToArrow 数字のmoveを矢印に変換
+func intToArrow(moves [depth+2]int) [depth+2]string {
+	var arrowMoves [depth+2]string
+	arrowMoves[0] = strconv.Itoa(moves[0] + 1)
+	arrowMoves[1] = strconv.Itoa(moves[1] + 1)
+
+	for i := 2; i < depth+2; i++ {
+		switch moves[i] {
+		case 1: arrowMoves[i] = "→"
+		case 2: arrowMoves[i] = "↓"
+		case 3: arrowMoves[i] = "←"
+		case 4: arrowMoves[i] = "↑"
+		default: arrowMoves[i] = ""
+		}
+	}
+
+	return arrowMoves
 }
