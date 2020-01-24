@@ -2,15 +2,15 @@
 今のところパズドラ解析プログラムを作っています。
 
 ## 使い方
-`$ git clone https://github.com/TatsukiFukushima/puzzle`
+`$ git clone https://github.com/TatsukiFukushima/puzzle`  
 `$ cd puzzle`
 
-①ターミナルから盤面を入力
-`$ go run puzzle.go`
+①ターミナルから盤面を入力  
+`$ go run puzzle.go`  
 "> " に続いて盤面を１行ずつ入力。
 
-②txtに盤面を保存して入力（おすすめ）
-同ディレクトリ内に input.txt みたいなテキストファイルを作成。
+②txtに盤面を保存して入力（おすすめ）  
+同ディレクトリ内に input.txt みたいなテキストファイルを作成。  
 `$ go run puzzle.go < input.txt`
 
 ## 盤面フォーマット
