@@ -3,25 +3,13 @@ package main
 import (
 	"fmt"
 	"strconv"
+	"sync"
 	"time"
 )
 
-// 2 1 3 4 6 3
-// 1 3 6 1 5 4
-// 3 4 5 2 2 4
-// 4 3 5 6 4 5
-// 2 6 4 5 4 5
-// 変更前: 6.625秒 25個
-// [53 ↓ ↓ → ↑ ← ← ← ↓ ← ↑ ↑ ↑ ↑ → ↓ → ↑ → ↓ ↓ ← ← ← ←]
-
-// 現状: 1.96秒 25個
-
 const depth int = 24
-
-var (
-	rate      float32
-	bestMoves BestMoves
-)
+var rate int = 0
+var bestMoves BestMoves
 
 func main() {
 	var board Board
@@ -44,15 +32,15 @@ func main() {
 	start := time.Now()
 
 	// ルートを探索
+	var wg sync.WaitGroup
+	wg.Add(30)
 	for i := 0; i < 5; i++ {
 		for j := 0; j < 6; j++ {
 			bestMoves[i][j].Point = 30
-			calcMoves(board, j, i)
-			rate += 10/3.0
-			log := strconv.Itoa(int(rate)) + "%"
-			fmt.Printf("\r%s", log)
+			go calcMoves(board, j, i, &wg)
 		}
 	}
+	wg.Wait()
 
 	bestMove := BestMove{Point: 30}
 	bestMove2 := BestMove{Point: 30}
@@ -110,11 +98,15 @@ type BestMove struct {
 type Board [5][6]int
 
 // calcMoves どの移動方法が最適か計算する。開始位置は指定。
-func calcMoves(board Board, x int, y int) {
+func calcMoves(board Board, x int, y int, wg *sync.WaitGroup) {
 	var moves [depth+2]int
 	moves[0] = x
 	moves[1] = y
 	move(1, board, x, y, moves)
+	rate++
+	log := strconv.Itoa(rate) + " / 30"
+	fmt.Printf("\r%s", log)
+	wg.Done()
 }
 
 // move ドロップを移動させる。手数、盤面、x座標、y座標
@@ -133,9 +125,9 @@ func move(n int, board Board, x int, y int, moves [depth+2]int) {
 			return
 		}
 	} else if n == 9 {
-		// 枝刈り。8回移動して24ポイントより大きいルートは探索しない。
+		// 枝刈り。8回移動して27ポイントより大きいルートは探索しない。
 		point = calcPoint(board)
-		if point > 24 {
+		if point > 27 {
 			return
 		}
 	} else if n == 13 {
@@ -282,8 +274,6 @@ func delete(board Board) (Board, bool) {
 
 // fall ドロップを落とす
 func fall(board Board) Board {
-	var fallenBoard Board
-
 	// 列ごとにループを回しているということを明示するためにjとしている。
 	for j := 0; j < 6; j++ {
 		// ドロップが落ちる先のy座標、的なニュアンス
@@ -291,13 +281,16 @@ func fall(board Board) Board {
 		for i := 4; i >= 0; i-- {
 			drop := board[i][j]
 			if drop != 0 {
-				fallenBoard[nextY][j] = drop
+				if i != nextY {
+					board[nextY][j] = drop
+					board[i][j] = 0
+				}
 				nextY--
 			}
 		}
 	}
 
-	return fallenBoard
+	return board
 }
 
 // calcPoint どれだけ残るかを計算
