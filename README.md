@@ -11,6 +11,7 @@
 
 ②txtに盤面を保存して入力（おすすめ）  
 同ディレクトリ内に input.txt などを作成。
+
 mac:
 `$ go run puzzle.go < input.txt`
 
