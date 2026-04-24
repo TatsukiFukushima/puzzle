@@ -8,6 +8,7 @@ import (
 )
 
 const depth int = 24
+
 var rate int = 0
 var bestMoves BestMoves
 
@@ -72,15 +73,17 @@ func main() {
 	fmt.Println("---------------------")
 	fmt.Print("候補１: ")
 	fmt.Println(bestArrowMove)
-	fmt.Println("消える数: " + strconv.Itoa(30 - bestMove.Point))
+	fmt.Println("消える数: " + strconv.Itoa(30-bestMove.Point))
 	printMoves(bestArrowMove)
+	fmt.Println("")
 	fmt.Print("候補２: ")
 	fmt.Println(bestArrowMove2)
-	fmt.Println("消える数: " + strconv.Itoa(30 - bestMove2.Point))
+	fmt.Println("消える数: " + strconv.Itoa(30-bestMove2.Point))
 	printMoves(bestArrowMove2)
+	fmt.Println("")
 	fmt.Print("候補３: ")
 	fmt.Println(bestArrowMove3)
-	fmt.Println("消える数: " + strconv.Itoa(30 - bestMove3.Point))
+	fmt.Println("消える数: " + strconv.Itoa(30-bestMove3.Point))
 	printMoves(bestArrowMove3)
 	fmt.Println(result)
 }
@@ -90,7 +93,7 @@ type BestMoves [5][6]BestMove
 
 // BestMove 最善手の情報を格納
 type BestMove struct {
-	Moves [depth+2]int
+	Moves [depth + 2]int
 	Point int
 }
 
@@ -99,10 +102,11 @@ type Board [5][6]int
 
 // calcMoves どの移動方法が最適か計算する。開始位置は指定。
 func calcMoves(board Board, x int, y int, wg *sync.WaitGroup) {
-	var moves [depth+2]int
+	var moves [depth + 2]int
 	moves[0] = x
 	moves[1] = y
-	move(1, board, x, y, moves)
+	currentDrop := board[y][x]
+	move(1, &board, x, y, currentDrop, moves)
 	rate++
 	log := strconv.Itoa(rate) + " / 30"
 	fmt.Printf("\r%s", log)
@@ -110,108 +114,101 @@ func calcMoves(board Board, x int, y int, wg *sync.WaitGroup) {
 }
 
 // move ドロップを移動させる。手数、盤面、x座標、y座標
-func move(n int, board Board, x int, y int, moves [depth+2]int) {
+func move(n int, board *Board, x int, y int, currentDrop int, moves [depth + 2]int) {
 	point := 0
-	// 指定の手数-1以上になった場合、ポイントを算出して最高得点だったらmovesを記録。
-	if n > depth - 1 {
-		point = calcPoint(board)
+	// 指定の手数になった場合、ポイントを算出して最高得点だったらmovesを記録。
+	if n > depth {
+		point = calcPoint(*board)
 		firstX := moves[0]
 		firstY := moves[1]
 		if point < bestMoves[firstY][firstX].Point {
 			bestMoves[firstY][firstX].Point = point
 			bestMoves[firstY][firstX].Moves = moves
 		}
-		if n > depth {
-			return
-		}
+		return
 	} else if n == 9 {
 		// 枝刈り。8回移動して27ポイントより大きいルートは探索しない。
-		point = calcPoint(board)
+		point = calcPoint(*board)
 		if point > 27 {
 			return
 		}
 	} else if n == 13 {
-		// 枝刈り2。12回移動して21ポイントより大きいルートは探索しない。
-		point = calcPoint(board)
-		if point > 21 {
+		// 枝刈り2。12回移動して24ポイントより大きいルートは探索しない。
+		point = calcPoint(*board)
+		if point > 24 {
 			return
 		}
-	} else if n == 17 {
-		// 枝刈り3。16回移動して18ポイントより大きいルートは探索しない。
-		point = calcPoint(board)
-		if point > 18 {
-			return
-		}
-	} else if n == 19 {
-		// 枝刈り4。18回移動して18ポイントより大きいルートは探索しない。
-		point = calcPoint(board)
-		if point > 18 {
-			return
-		}
-	} else if n == 21 {
-		// 枝刈り5。20回移動して18ポイントより大きいルートは探索しない。
-		point = calcPoint(board)
-		if point > 18 {
-			return
-		}
-	} else if n == 23 {
-		// 枝刈り6。22回移動して18ポイントより大きいルートは探索しない。
-		point = calcPoint(board)
-		if point > 18 {
-			return
-		}
+		// } else if n == 17 {
+		// 	// 枝刈り3。16回移動して18ポイントより大きいルートは探索しない。
+		// 	point = calcPoint(board)
+		// 	if point > 18 {
+		// 		return
+		// 	}
+		// } else if n == 19 {
+		// 	// 枝刈り4。18回移動して18ポイントより大きいルートは探索しない。
+		// 	point = calcPoint(board)
+		// 	if point > 18 {
+		// 		return
+		// 	}
+		// } else if n == 21 {
+		// 	// 枝刈り5。20回移動して18ポイントより大きいルートは探索しない。
+		// 	point = calcPoint(board)
+		// 	if point > 18 {
+		// 		return
+		// 	}
+		// } else if n == 23 {
+		// 	// 枝刈り6。22回移動して18ポイントより大きいルートは探索しない。
+		// 	point = calcPoint(board)
+		// 	if point > 18 {
+		// 		return
+		// 	}
 	}
 
-	drop := board[y][x]
 	// 高速化のため。
-	nPlus := n+1
-	xPlus := x+1
-	xMinus := x-1
-	yPlus := y+1
-	yMinus := y-1
+	nPlus := n + 1
+	xPlus := x + 1
+	xMinus := x - 1
+	yPlus := y + 1
+	yMinus := y - 1
 
 	// Right 1
 	if (moves[n] != 3 || n == 1) && x != 5 {
-		dropR := board[y][xPlus]
-		board[y][x] = dropR
-		board[y][xPlus] = drop
+		board[y][x] = board[y][xPlus]
+		board[y][xPlus] = currentDrop
 		moves[nPlus] = 1
-		move(nPlus, board, xPlus, y, moves)
-		board[y][x] = drop
-		board[y][xPlus] = dropR
+		move(nPlus, board, xPlus, y, currentDrop, moves)
+		board[y][xPlus] = board[y][x]
+		board[y][x] = currentDrop
 	}
 
 	// Down 2
 	if (moves[n] != 4 || n == 1) && y != 4 {
-		dropD := board[yPlus][x]
-		board[y][x] = dropD
-		board[yPlus][x] = drop
+		board[y][x] = board[yPlus][x]
+		board[yPlus][x] = currentDrop
 		moves[nPlus] = 2
-		move(nPlus, board, x, yPlus, moves)
-		board[y][x] = drop
-		board[yPlus][x] = dropD
+		move(nPlus, board, x, yPlus, currentDrop, moves)
+		board[yPlus][x] = board[y][x]
+		board[y][x] = currentDrop
 	}
 
 	// Left 3
 	if (moves[n] != 1 || n == 1) && x != 0 {
-		dropL := board[y][xMinus]
-		board[y][x] = dropL
-		board[y][xMinus] = drop
+		board[y][x] = board[y][xMinus]
+		board[y][xMinus] = currentDrop
 		moves[nPlus] = 3
-		move(nPlus, board, xMinus, y, moves)
-		board[y][x] = drop
-		board[y][xMinus] = dropL
+		move(nPlus, board, xMinus, y, currentDrop, moves)
+		board[y][xMinus] = board[y][x]
+		board[y][x] = currentDrop
 	}
 
 	// Up 4
 	if (moves[n] != 2 || n == 1) && y != 0 {
-		dropU := board[yMinus][x]
-		board[y][x] = dropU
-		board[yMinus][x] = drop
+		board[y][x] = board[yMinus][x]
+		board[yMinus][x] = currentDrop
 		moves[nPlus] = 4
-		move(nPlus, board, x, yMinus, moves)
-		board[y][x] = drop
-		board[yMinus][x] = dropU
+		move(nPlus, board, x, yMinus, currentDrop, moves)
+		board[yMinus][x] = board[y][x]
+		board[y][x] = currentDrop
 	}
 	moves[nPlus] = 0
 }
@@ -219,27 +216,18 @@ func move(n int, board Board, x int, y int, moves [depth+2]int) {
 // delete ドロップを消す
 func delete(board Board) (Board, bool) {
 	isWork := false
-
-	// 非常に汚い書き方だが、多分これの方が高速。
-	deletedBoard := Board {
-		{board[0][0], board[0][1], board[0][2], board[0][3], board[0][4], board[0][5]},
-		{board[1][0], board[1][1], board[1][2], board[1][3], board[1][4], board[1][5]},
-		{board[2][0], board[2][1], board[2][2], board[2][3], board[2][4], board[2][5]},
-		{board[3][0], board[3][1], board[3][2], board[3][3], board[3][4], board[3][5]},
-		{board[4][0], board[4][1], board[4][2], board[4][3], board[4][4], board[4][5]},
-	}
+	deletedBoard := board
 
 	// 横方向の削除
 	for i := 0; i < 5; i++ {
 		for j := 1; j < 5; j++ {
 			drop := board[i][j]
-			jPlus := j+1
-			jMinus := j-1
-
 			if drop == 0 {
 				continue
 			}
 
+			jPlus := j + 1
+			jMinus := j - 1
 			if board[i][jMinus] == drop && drop == board[i][jPlus] {
 				deletedBoard[i][jMinus] = 0
 				deletedBoard[i][j] = 0
@@ -253,13 +241,12 @@ func delete(board Board) (Board, bool) {
 	for i := 1; i < 4; i++ {
 		for j := 0; j < 6; j++ {
 			drop := board[i][j]
-			iPlus := i+1
-			iMinus := i-1
-
 			if drop == 0 {
 				continue
 			}
 
+			iPlus := i + 1
+			iMinus := i - 1
 			if board[iMinus][j] == drop && drop == board[iPlus][j] {
 				deletedBoard[iMinus][j] = 0
 				deletedBoard[i][j] = 0
@@ -273,7 +260,7 @@ func delete(board Board) (Board, bool) {
 }
 
 // fall ドロップを落とす
-func fall(board Board) Board {
+func fall(board *Board) {
 	// 列ごとにループを回しているということを明示するためにjとしている。
 	for j := 0; j < 6; j++ {
 		// ドロップが落ちる先のy座標、的なニュアンス
@@ -289,8 +276,6 @@ func fall(board Board) Board {
 			}
 		}
 	}
-
-	return board
 }
 
 // calcPoint どれだけ残るかを計算
@@ -302,7 +287,7 @@ func calcPoint(board Board) int {
 	for {
 		board, isWork = delete(board)
 		if isWork {
-			board = fall(board)
+			fall(&board)
 			continue
 		}
 
@@ -328,7 +313,7 @@ func (board Board) printBoard() {
 }
 
 // printMoves ルートをきれいに表示
-func printMoves(moves [depth+2]string) {
+func printMoves(moves [depth + 2]string) {
 	root := [][]string{
 		{"○", " ", "○", " ", "○", " ", "○", " ", "○", " ", "○"},
 		{" ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " "},
@@ -343,44 +328,44 @@ func printMoves(moves [depth+2]string) {
 
 	startX, _ := strconv.Atoi(moves[0])
 	startY, _ := strconv.Atoi(moves[1])
-	x := startX * 2 - 2
-	y := startY * 2 - 2
+	x := startX*2 - 2
+	y := startY*2 - 2
 	root[y][x] = "S"
 
 	for i := 2; i < len(moves); i++ {
 		switch moves[i] {
-			case "→":
-				arrow := root[y][x+1]
-				if arrow == " " || arrow == "→" {
-					root[y][x+1] = "→"
-				} else if arrow == "←" || arrow == "⇄" {
-					root[y][x+1] = "⇄"
-				}
-				x += 2
-			case "↓":
-				arrow := root[y+1][x]
-				if arrow == " " || arrow == "↓" {
-					root[y+1][x] = "↓"
-				} else if arrow == "↑" || arrow == "⇅" {
-					root[y+1][x] = "⇅"
-				}
-				y += 2
-			case "←":
-				arrow := root[y][x-1]
-				if arrow == " " || arrow == "←" {
-					root[y][x-1] = "←"
-				} else if arrow == "→" || arrow == "⇄" {
-					root[y][x-1] = "⇄"
-				}
-				x -= 2
-			case "↑":
-				arrow := root[y-1][x]
-				if arrow == " " || arrow == "↑" {
-					root[y-1][x] = "↑"
-				} else if arrow == "↓" || arrow == "⇅" {
-					root[y-1][x] = "⇅"
-				}
-				y -= 2
+		case "→":
+			arrow := root[y][x+1]
+			if arrow == " " || arrow == "→" {
+				root[y][x+1] = "→"
+			} else if arrow == "←" || arrow == "⇄" {
+				root[y][x+1] = "⇄"
+			}
+			x += 2
+		case "↓":
+			arrow := root[y+1][x]
+			if arrow == " " || arrow == "↓" {
+				root[y+1][x] = "↓"
+			} else if arrow == "↑" || arrow == "⇅" {
+				root[y+1][x] = "⇅"
+			}
+			y += 2
+		case "←":
+			arrow := root[y][x-1]
+			if arrow == " " || arrow == "←" {
+				root[y][x-1] = "←"
+			} else if arrow == "→" || arrow == "⇄" {
+				root[y][x-1] = "⇄"
+			}
+			x -= 2
+		case "↑":
+			arrow := root[y-1][x]
+			if arrow == " " || arrow == "↑" {
+				root[y-1][x] = "↑"
+			} else if arrow == "↓" || arrow == "⇅" {
+				root[y-1][x] = "⇅"
+			}
+			y -= 2
 		}
 	}
 
@@ -392,18 +377,23 @@ func printMoves(moves [depth+2]string) {
 }
 
 // intToArrow 数字のmoveを矢印に変換
-func intToArrow(moves [depth+2]int) [depth+2]string {
-	var arrowMoves [depth+2]string
+func intToArrow(moves [depth + 2]int) [depth + 2]string {
+	var arrowMoves [depth + 2]string
 	arrowMoves[0] = strconv.Itoa(moves[0] + 1)
 	arrowMoves[1] = strconv.Itoa(moves[1] + 1)
 
 	for i := 2; i < depth+2; i++ {
 		switch moves[i] {
-		case 1: arrowMoves[i] = "→"
-		case 2: arrowMoves[i] = "↓"
-		case 3: arrowMoves[i] = "←"
-		case 4: arrowMoves[i] = "↑"
-		default: arrowMoves[i] = ""
+		case 1:
+			arrowMoves[i] = "→"
+		case 2:
+			arrowMoves[i] = "↓"
+		case 3:
+			arrowMoves[i] = "←"
+		case 4:
+			arrowMoves[i] = "↑"
+		default:
+			arrowMoves[i] = ""
 		}
 	}
 
