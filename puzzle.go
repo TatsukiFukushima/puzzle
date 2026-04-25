@@ -7,7 +7,16 @@ import (
 	"time"
 )
 
-const depth int = 24
+const depth int = 26
+
+var intDropMap map[int]string = map[int]string{
+	1: "\033[1m\033[31m●\033[0m",
+	2: "\033[1m\033[34m●\033[0m",
+	3: "\033[1m\033[32m●\033[0m",
+	4: "\033[1m\033[33m●\033[0m",
+	5: "\033[1m\033[35m●\033[0m",
+	6: "\033[1m\033[38;2;255;105;180m■\033[0m",
+}
 
 var rate int = 0
 var bestMoves BestMoves
@@ -30,6 +39,7 @@ func main() {
 	}
 	fmt.Println("")
 	board.printBoard()
+	fmt.Printf("探索手数: %d\n", depth)
 	start := time.Now()
 
 	// ルートを探索
@@ -138,30 +148,18 @@ func move(n int, board *Board, x int, y int, currentDrop int, moves [depth + 2]i
 		if point > 24 {
 			return
 		}
-		// } else if n == 17 {
-		// 	// 枝刈り3。16回移動して18ポイントより大きいルートは探索しない。
-		// 	point = calcPoint(board)
-		// 	if point > 18 {
-		// 		return
-		// 	}
-		// } else if n == 19 {
-		// 	// 枝刈り4。18回移動して18ポイントより大きいルートは探索しない。
-		// 	point = calcPoint(board)
-		// 	if point > 18 {
-		// 		return
-		// 	}
-		// } else if n == 21 {
-		// 	// 枝刈り5。20回移動して18ポイントより大きいルートは探索しない。
-		// 	point = calcPoint(board)
-		// 	if point > 18 {
-		// 		return
-		// 	}
-		// } else if n == 23 {
-		// 	// 枝刈り6。22回移動して18ポイントより大きいルートは探索しない。
-		// 	point = calcPoint(board)
-		// 	if point > 18 {
-		// 		return
-		// 	}
+	} else if n == 17 {
+		// 枝刈り3。16回移動して24ポイントより大きいルートは探索しない。
+		point = calcPoint(*board)
+		if point > 24 {
+			return
+		}
+	} else if n == 21 {
+		// 枝刈り4。20回移動して24ポイントより大きいルートは探索しない。
+		point = calcPoint(*board)
+		if point > 24 {
+			return
+		}
 	}
 
 	// 高速化のため。
@@ -305,10 +303,17 @@ func calcPoint(board Board) int {
 	return point
 }
 
-// printBoard 配列をきれいに出力。テスト用かも。
+// printBoard 配列をきれいに出力
 func (board Board) printBoard() {
 	for _, b := range board {
-		fmt.Println(b)
+		for _, drop := range b {
+			if drop == 0 {
+				fmt.Print("  ")
+			} else {
+				fmt.Print(intDropMap[drop] + " ")
+			}
+		}
+		fmt.Println()
 	}
 }
 
@@ -335,34 +340,42 @@ func printMoves(moves [depth + 2]string) {
 	for i := 2; i < len(moves); i++ {
 		switch moves[i] {
 		case "→":
-			arrow := root[y][x+1]
-			if arrow == " " || arrow == "→" {
+			switch root[y][x+1] {
+			case " ":
 				root[y][x+1] = "→"
-			} else if arrow == "←" || arrow == "⇄" {
+			case "→":
+				root[y][x+1] = "⇉"
+			default:
 				root[y][x+1] = "⇄"
 			}
 			x += 2
 		case "↓":
-			arrow := root[y+1][x]
-			if arrow == " " || arrow == "↓" {
+			switch root[y+1][x] {
+			case " ":
 				root[y+1][x] = "↓"
-			} else if arrow == "↑" || arrow == "⇅" {
+			case "↓":
+				root[y+1][x] = "⇊"
+			default:
 				root[y+1][x] = "⇅"
 			}
 			y += 2
 		case "←":
-			arrow := root[y][x-1]
-			if arrow == " " || arrow == "←" {
+			switch root[y][x-1] {
+			case " ":
 				root[y][x-1] = "←"
-			} else if arrow == "→" || arrow == "⇄" {
+			case "←":
+				root[y][x-1] = "⇇"
+			default:
 				root[y][x-1] = "⇄"
 			}
 			x -= 2
 		case "↑":
-			arrow := root[y-1][x]
-			if arrow == " " || arrow == "↑" {
+			switch root[y-1][x] {
+			case " ":
 				root[y-1][x] = "↑"
-			} else if arrow == "↓" || arrow == "⇅" {
+			case "↑":
+				root[y-1][x] = "⇈"
+			default:
 				root[y-1][x] = "⇅"
 			}
 			y -= 2
