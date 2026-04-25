@@ -1,5 +1,5 @@
 # puzzle
-今のところパズドラ解析プログラムを作っています。
+パズドラ解析プログラム
 
 ## 使い方
 `$ git clone https://github.com/TatsukiFukushima/puzzle`  
@@ -10,8 +10,13 @@
 "> " に続いて盤面を１行ずつ入力。
 
 ②txtに盤面を保存して入力（おすすめ）  
-同ディレクトリ内に input.txt みたいなテキストファイルを作成。  
+同ディレクトリ内に input.txt などを作成。
+
+mac:
 `$ go run puzzle.go < input.txt`
+
+PowerShell
+`Get-Content input.txt | go run puzzle.go`
 
 ## 盤面フォーマット
 ```
