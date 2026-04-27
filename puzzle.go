@@ -3,11 +3,13 @@ package main
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
 
-const depth int = 26
+const depth int = 20
+const mode int = 2 // 0: 全探索, 1: バランス型, 2: 高速
 
 var intDropMap map[int]string = map[int]string{
 	1: "\033[1m\033[31m●\033[0m",
@@ -20,6 +22,7 @@ var intDropMap map[int]string = map[int]string{
 
 var rate int = 0
 var bestMoves BestMoves
+var bestPoint int = 30
 
 func main() {
 	var board Board
@@ -40,6 +43,7 @@ func main() {
 	fmt.Println("")
 	board.printBoard()
 	fmt.Printf("探索手数: %d\n", depth)
+	fmt.Print("\r解析済:  0/30, 暫定スコア:  0個")
 	start := time.Now()
 
 	// ルートを探索
@@ -80,21 +84,24 @@ func main() {
 	bestArrowMove3 := intToArrow(bestMove3.Moves)
 
 	fmt.Printf("\r")
-	fmt.Println("---------------------")
+	fmt.Println("-------------------------------")
 	fmt.Print("候補１: ")
 	fmt.Println(bestArrowMove)
 	fmt.Println("消える数: " + strconv.Itoa(30-bestMove.Point))
 	printMoves(bestArrowMove)
+	board.printMovedBoard(bestMove.Moves)
 	fmt.Println("")
 	fmt.Print("候補２: ")
 	fmt.Println(bestArrowMove2)
 	fmt.Println("消える数: " + strconv.Itoa(30-bestMove2.Point))
 	printMoves(bestArrowMove2)
+	board.printMovedBoard(bestMove2.Moves)
 	fmt.Println("")
 	fmt.Print("候補３: ")
 	fmt.Println(bestArrowMove3)
 	fmt.Println("消える数: " + strconv.Itoa(30-bestMove3.Point))
 	printMoves(bestArrowMove3)
+	board.printMovedBoard(bestMove3.Moves)
 	fmt.Println(result)
 }
 
@@ -118,8 +125,7 @@ func calcMoves(board Board, x int, y int, wg *sync.WaitGroup) {
 	currentDrop := board[y][x]
 	move(1, &board, x, y, currentDrop, moves)
 	rate++
-	log := strconv.Itoa(rate) + " / 30"
-	fmt.Printf("\r%s", log)
+	fmt.Printf("\r解析済: %2d/30, 暫定スコア: %2d個", rate, 30-bestPoint)
 	wg.Done()
 }
 
@@ -134,31 +140,54 @@ func move(n int, board *Board, x int, y int, currentDrop int, moves [depth + 2]i
 		if point < bestMoves[firstY][firstX].Point {
 			bestMoves[firstY][firstX].Point = point
 			bestMoves[firstY][firstX].Moves = moves
+			if point < bestPoint {
+				bestPoint = point
+				fmt.Printf("\r解析済: %2d/30, 暫定スコア: %2d個", rate, 30-bestPoint)
+			}
 		}
 		return
-	} else if n == 9 {
-		// 枝刈り。8回移動して27ポイントより大きいルートは探索しない。
-		point = calcPoint(*board)
-		if point > 27 {
-			return
+	}
+
+	// 枝刈り処理
+	if mode == 1 { // バランス
+		if n == 11 {
+			// 10回移動して27ポイントより大きいルートは探索しない。
+			point = calcPoint(*board)
+			if point > 27 {
+				return
+			}
+		} else if n == 16 {
+			// 15回移動して24ポイントより大きいルートは探索しない。
+			point = calcPoint(*board)
+			if point > 24 {
+				return
+			}
 		}
-	} else if n == 13 {
-		// 枝刈り2。12回移動して24ポイントより大きいルートは探索しない。
-		point = calcPoint(*board)
-		if point > 24 {
-			return
-		}
-	} else if n == 17 {
-		// 枝刈り3。16回移動して24ポイントより大きいルートは探索しない。
-		point = calcPoint(*board)
-		if point > 24 {
-			return
-		}
-	} else if n == 21 {
-		// 枝刈り4。20回移動して24ポイントより大きいルートは探索しない。
-		point = calcPoint(*board)
-		if point > 24 {
-			return
+	} else if mode == 2 { // 高速
+		if n == 9 {
+			// 8回移動して27ポイントより大きいルートは探索しない。
+			point = calcPoint(*board)
+			if point > 27 {
+				return
+			}
+		} else if n == 13 {
+			// 12回移動して24ポイントより大きいルートは探索しない。
+			point = calcPoint(*board)
+			if point > 24 {
+				return
+			}
+		} else if n == 17 {
+			// 16回移動して24ポイントより大きいルートは探索しない。
+			point = calcPoint(*board)
+			if point > 24 {
+				return
+			}
+		} else if n == 21 {
+			// 20回移動して24ポイントより大きいルートは探索しない。
+			point = calcPoint(*board)
+			if point > 24 {
+				return
+			}
 		}
 	}
 
@@ -317,6 +346,35 @@ func (board Board) printBoard() {
 	}
 }
 
+// printMovedBoard 動かした後の盤面をきれいに出力
+func (board Board) printMovedBoard(moves [depth + 2]int) {
+	catchedDrop := board[moves[1]][moves[0]]
+	x := moves[0]
+	y := moves[1]
+
+	for i := 2; i < len(moves); i++ {
+		switch moves[i] {
+		case 1:
+			board[y][x] = board[y][x+1]
+			board[y][x+1] = catchedDrop
+			x += 1
+		case 2:
+			board[y][x] = board[y+1][x]
+			board[y+1][x] = catchedDrop
+			y += 1
+		case 3:
+			board[y][x] = board[y][x-1]
+			board[y][x-1] = catchedDrop
+			x -= 1
+		case 4:
+			board[y][x] = board[y-1][x]
+			board[y-1][x] = catchedDrop
+			y -= 1
+		}
+	}
+	board.printBoard()
+}
+
 // printMoves ルートをきれいに表示
 func printMoves(moves [depth + 2]string) {
 	root := [][]string{
@@ -335,54 +393,58 @@ func printMoves(moves [depth + 2]string) {
 	startY, _ := strconv.Atoi(moves[1])
 	x := startX*2 - 2
 	y := startY*2 - 2
-	root[y][x] = "S"
+	root[y][x] = "\033[1m\033[38;2;0;0;255mS\033[0m"
 
 	for i := 2; i < len(moves); i++ {
+		colorR := 255 * (i - 2) / depth
+		colorB := 255 - colorR
+		color := fmt.Sprintf("\033[1m\033[38;2;%d;0;%dm", colorR, colorB)
+		move := ""
 		switch moves[i] {
 		case "→":
-			switch root[y][x+1] {
-			case " ":
-				root[y][x+1] = "→"
-			case "→":
-				root[y][x+1] = "⇉"
-			default:
-				root[y][x+1] = "⇄"
+			if root[y][x+1] == " " {
+				move = "→"
+			} else if strings.Contains(root[y][x+1], "→") || strings.Contains(root[y][x+1], "⇉") {
+				move = "⇉"
+			} else {
+				move = "⇄"
 			}
+			root[y][x+1] = color + move + "\033[0m"
 			x += 2
 		case "↓":
-			switch root[y+1][x] {
-			case " ":
-				root[y+1][x] = "↓"
-			case "↓":
-				root[y+1][x] = "⇊"
-			default:
-				root[y+1][x] = "⇅"
+			if root[y+1][x] == " " {
+				move = "↓"
+			} else if strings.Contains(root[y+1][x], "↓") || strings.Contains(root[y+1][x], "⇊") {
+				move = "⇊"
+			} else {
+				move = "⇅"
 			}
+			root[y+1][x] = color + move + "\033[0m"
 			y += 2
 		case "←":
-			switch root[y][x-1] {
-			case " ":
-				root[y][x-1] = "←"
-			case "←":
-				root[y][x-1] = "⇇"
-			default:
-				root[y][x-1] = "⇄"
+			if root[y][x-1] == " " {
+				move = "←"
+			} else if strings.Contains(root[y][x-1], "←") || strings.Contains(root[y][x-1], "⇇") {
+				move = "⇇"
+			} else {
+				move = "⇄"
 			}
+			root[y][x-1] = color + move + "\033[0m"
 			x -= 2
 		case "↑":
-			switch root[y-1][x] {
-			case " ":
-				root[y-1][x] = "↑"
-			case "↑":
-				root[y-1][x] = "⇈"
-			default:
-				root[y-1][x] = "⇅"
+			if root[y-1][x] == " " {
+				move = "↑"
+			} else if strings.Contains(root[y-1][x], "↑") || strings.Contains(root[y-1][x], "⇈") {
+				move = "⇈"
+			} else {
+				move = "⇅"
 			}
+			root[y-1][x] = color + move + "\033[0m"
 			y -= 2
 		}
 	}
 
-	root[y][x] = "G"
+	root[y][x] = "\033[1m\033[38;2;255;0;0mG\033[0m"
 
 	for _, r := range root {
 		fmt.Println(r)
