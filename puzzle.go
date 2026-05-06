@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-const depth int = 20
+const depth int = 21
 const mode int = 2 // 0: 全探索, 1: バランス型, 2: 高速
 
 var intDropMap map[int]string = map[int]string{
@@ -42,7 +42,16 @@ func main() {
 	}
 	fmt.Println("")
 	board.printBoard()
-	fmt.Printf("探索手数: %d\n", depth)
+	modeStr := ""
+	switch mode {
+	case 0:
+		modeStr = "全探索"
+	case 1:
+		modeStr = "バランス型"
+	case 2:
+		modeStr = "高速"
+	}
+	fmt.Printf("探索手数: %d, モード: %s\n", depth, modeStr)
 	fmt.Print("\r解析済:  0/30, 暫定スコア:  0個")
 	start := time.Now()
 
@@ -60,19 +69,47 @@ func main() {
 	bestMove := BestMove{Point: 30}
 	bestMove2 := BestMove{Point: 30}
 	bestMove3 := BestMove{Point: 30}
+	bestMove4 := BestMove{Point: 30}
+	bestMove5 := BestMove{Point: 30}
 
 	// 30の候補の中から最善手を計算
 	for i := 0; i < 5; i++ {
 		for j := 0; j < 6; j++ {
 			if bestMoves[i][j].Point < bestMove.Point {
+				bestMove5.Point = bestMove4.Point
+				bestMove5.Moves = bestMove4.Moves
+				bestMove4.Point = bestMove3.Point
+				bestMove4.Moves = bestMove3.Moves
+				bestMove3.Point = bestMove2.Point
+				bestMove3.Moves = bestMove2.Moves
+				bestMove2.Point = bestMove.Point
+				bestMove2.Moves = bestMove.Moves
 				bestMove.Point = bestMoves[i][j].Point
 				bestMove.Moves = bestMoves[i][j].Moves
 			} else if bestMoves[i][j].Point < bestMove2.Point {
+				bestMove5.Point = bestMove4.Point
+				bestMove5.Moves = bestMove4.Moves
+				bestMove4.Point = bestMove3.Point
+				bestMove4.Moves = bestMove3.Moves
+				bestMove3.Point = bestMove2.Point
+				bestMove3.Moves = bestMove2.Moves
 				bestMove2.Point = bestMoves[i][j].Point
 				bestMove2.Moves = bestMoves[i][j].Moves
 			} else if bestMoves[i][j].Point < bestMove3.Point {
+				bestMove5.Point = bestMove4.Point
+				bestMove5.Moves = bestMove4.Moves
+				bestMove4.Point = bestMove3.Point
+				bestMove4.Moves = bestMove3.Moves
 				bestMove3.Point = bestMoves[i][j].Point
 				bestMove3.Moves = bestMoves[i][j].Moves
+			} else if bestMoves[i][j].Point < bestMove4.Point {
+				bestMove5.Point = bestMove4.Point
+				bestMove5.Moves = bestMove4.Moves
+				bestMove4.Point = bestMoves[i][j].Point
+				bestMove4.Moves = bestMoves[i][j].Moves
+			} else if bestMoves[i][j].Point < bestMove5.Point {
+				bestMove5.Point = bestMoves[i][j].Point
+				bestMove5.Moves = bestMoves[i][j].Moves
 			}
 		}
 	}
@@ -82,6 +119,8 @@ func main() {
 	bestArrowMove := intToArrow(bestMove.Moves)
 	bestArrowMove2 := intToArrow(bestMove2.Moves)
 	bestArrowMove3 := intToArrow(bestMove3.Moves)
+	bestArrowMove4 := intToArrow(bestMove4.Moves)
+	bestArrowMove5 := intToArrow(bestMove5.Moves)
 
 	fmt.Printf("\r")
 	fmt.Println("-------------------------------")
@@ -102,6 +141,18 @@ func main() {
 	fmt.Println("消える数: " + strconv.Itoa(30-bestMove3.Point))
 	printMoves(bestArrowMove3)
 	board.printMovedBoard(bestMove3.Moves)
+	fmt.Println("")
+	fmt.Print("候補４: ")
+	fmt.Println(bestArrowMove4)
+	fmt.Println("消える数: " + strconv.Itoa(30-bestMove4.Point))
+	printMoves(bestArrowMove4)
+	board.printMovedBoard(bestMove4.Moves)
+	fmt.Println("")
+	fmt.Print("候補５: ")
+	fmt.Println(bestArrowMove5)
+	fmt.Println("消える数: " + strconv.Itoa(30-bestMove5.Point))
+	printMoves(bestArrowMove5)
+	board.printMovedBoard(bestMove5.Moves)
 	fmt.Println(result)
 }
 
